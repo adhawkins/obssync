@@ -4,13 +4,22 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import {
           Navbar,
+          Nav,
           Container,
           Row,
           Col,
-          Form
-        } from 'react-bootstrap';
+          Form} from 'react-bootstrap';
+
+import {
+        BrowserRouter as Router,
+        Switch,
+        Route } from "react-router-dom";
+
+import {LinkContainer} from 'react-router-bootstrap'
 
 import OBSClient from './components/OBSClient.js';
+import Clients from './components/Clients.js';
+import Config from './components/Config.js';
 
 import OBSWebSocket from 'obs-websocket-js'
 
@@ -244,18 +253,37 @@ function App() {
 
   return (
     <div className="App">
-      <Navbar>
-          <Navbar.Brand>OBS Scene Sync</Navbar.Brand>
-      </Navbar>
-      <Container fluid>
-        <Form>
-          <Row>
-            <Col>
-              {clientList}
-            </Col>
-          </Row>
-        </Form>
-      </Container>
+      <Router>
+        <Navbar>
+            <Navbar.Brand>OBS Scene Sync</Navbar.Brand>
+            <LinkContainer to="/clients">
+              <Nav.Link>Clients</Nav.Link>
+            </LinkContainer>
+            <LinkContainer to="/config">
+            <Nav.Link>Config</Nav.Link>
+            </LinkContainer>
+        </Navbar>
+        <Container fluid>
+          <Form>
+            <Row>
+              <Col>
+                {clientList}
+              </Col>
+            </Row>
+            <Row>
+              <Col>
+                <Switch>
+                  <Route exact path="/config" component={Config} />
+                  <Route path="/clients" render={(props) => (
+                      <Clients {...props} clients={clients}/>
+                      )}
+                    />
+                </Switch>
+              </Col>
+            </Row>
+          </Form>
+        </Container>
+      </Router>
     </div>
   );
 }
