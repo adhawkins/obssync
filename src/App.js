@@ -8,25 +8,29 @@ import {
           Container,
           Row,
           Col,
-          Form} from 'react-bootstrap';
+        } from 'react-bootstrap';
 
 import {
-        BrowserRouter as Router,
-        Switch,
-        Route } from "react-router-dom";
+          BrowserRouter as Router,
+          Switch,
+          Route,
+          useHistory
+        } from "react-router-dom";
 
 import {LinkContainer} from 'react-router-bootstrap'
 
-import OBSClient from './components/OBSClient.js';
 import Clients from './components/Clients.js';
 import Config from './components/Config.js';
 
 import OBSWebSocket from 'obs-websocket-js'
 
-//let OBS = new OBSWebSocket();
+import useCookie from "./hooks/useCookie.js";
+
 let OBS = [];
 
-function App() {
+function App(props) {
+  const [ cookieConfig, setCookieConfig ] = useCookie("config", JSON.stringify([]));
+
   function usePrevious(value) {
     const ref = useRef();
     useEffect(() => {
@@ -35,6 +39,9 @@ function App() {
     return ref.current;
   }
 
+  const [clients, setClients] = useState(JSON.parse(cookieConfig));
+
+/*
   const [clients, setClients] = useState(
                                           [
                                             {
@@ -69,15 +76,18 @@ function App() {
                                             }
                                           ]
                                         );
-  const previousClients = usePrevious(clients);
+*/
 
-  const updateStatusCallback = useCallback((key, status) =>{
+  const previousClients = usePrevious(clients);
+  //const [previousClients, setPreviousClients] = useState(JSON.stringify([]));
+
+  const updateStatusCallback = useCallback((key, status) => {
     const newClients = [...clients];
     newClients[key].state.state = status;
     setClients(newClients);
   }, [clients]);
 
-  const updateScenesCallback = useCallback((key, scenes, currentScene) =>{
+  const updateScenesCallback = useCallback((key, scenes, currentScene) => {
     const newClients = [...clients];
     newClients[key].state.scenes = scenes.map((thisItem, thisKey)  => {
        return thisItem.name;
@@ -86,13 +96,13 @@ function App() {
     setClients(newClients);
   }, [clients]);
 
-  const updateCurrentSceneCallback = useCallback((key, currentScene) =>{
+  const updateCurrentSceneCallback = useCallback((key, currentScene) => {
     const newClients = [...clients];
     newClients[key].state.currentScene = currentScene;
     setClients(newClients);
   }, [clients]);
 
-  const updateRecordingCallback = useCallback((key, recording) =>{
+  const updateRecordingCallback = useCallback((key, recording) => {
     const newClients = [...clients];
     newClients[key].state.recording = recording;
     setClients(newClients);
@@ -109,6 +119,26 @@ function App() {
     }
   }, [updateStatusCallback]);
 
+  const obsDisconnectCallback = useCallback(() => {
+    function doOBSDisconnect() {
+      OBS.forEach((item, key) => {
+        OBS[key].removeAllListeners();
+        OBS[key].disconnect();
+        OBS[key]=null;
+      });
+
+      OBS=[];
+
+      clients.forEach((item, key) => {
+        updateScenesCallback(key, [], "");
+        updateStatusCallback(key, "Disconnected");
+        updateRecordingCallback(key, false);
+      });
+    }
+
+    doOBSDisconnect();
+  }, [updateScenesCallback, updateStatusCallback, updateRecordingCallback, clients]);
+
   async function sendCommand(key, command, params) {
    try {
       return await OBS[key].send(command, params || {});
@@ -119,97 +149,33 @@ function App() {
   }
 
   useEffect(() => {
-      function isArray(value) {
-        return Array.isArray(value);
-      }
+    function isArray(value) {
+      return Array.isArray(value);
+    }
 
-      let changed = false;
-      let prevClientsParsed = []
+    let changed = false;
+    let prevClientsParsed = []
 
-      if (previousClients) {
-        prevClientsParsed = JSON.parse(previousClients);
-      }
+    if (previousClients) {
+      prevClientsParsed = JSON.parse(previousClients);
+    }
 
-       if (isArray(clients) !== isArray(prevClientsParsed)) {
+     if (isArray(clients) !== isArray(prevClientsParsed)) {
+      changed = true;
+    } else if (isArray(clients) && isArray(prevClientsParsed)) {
+      if (clients.length !== prevClientsParsed.length) {
         changed = true;
-      } else if (isArray(clients) && isArray(prevClientsParsed)) {
-        if (clients.length !== prevClientsParsed.length) {
-          console.log("Size has changed");
-          changed = true;
-        } else {
-          clients.forEach((item, key) => {
-            //console.log("Comparing: '" + JSON.stringify(item.config) + "' with '" + JSON.stringify(prevClientsParsed[key].config) + "'");
-
-            if (JSON.stringify(item.config) !== JSON.stringify(prevClientsParsed[key].config)) {
-              console.log ("Item " + key + " has changed");
-              changed = true;
-            }
-          });
-        }
-      }
-
-      if (changed) {
-        console.log("Changed - recreating");
-
+      } else {
         clients.forEach((item, key) => {
-        OBS.forEach((item, key) => {
-          OBS[key].disconnect();
-          OBS[key]=null;
-        });
-
-        OBS=[];
-
-        clients.forEach((item, key) => {
-          console.log("Processing '" + key + "', '" + item + "'");
-
-          OBS.push(new OBSWebSocket());
-          OBS[key].on('ConnectionClosed', () => {
-            updateStatusCallback(key, 'Connection closed');
-            updateScenesCallback(key, [], '');
-            console.log("Connection to '" + clients[key].config.address + "' closed");
-          });
-          OBS[key].on('AuthenticationSuccess', async () => {
-            updateStatusCallback(key, 'Auth successful');
-            console.log("Authentication successful");
-            let scenes = await sendCommand(key, "GetSceneList");
-            updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
-          });
-
-          OBS[key].on('SwitchScenes', (data) => {
-            console.log("New scene for '" + key + "' - '" + data.sceneName + "'");
-            updateCurrentSceneCallback(key, data.sceneName);
-            clients.forEach( async (clientInfo, clientKey) => {
-              console.log("Comparing with '" + clientKey + "' - current scene '" + clientInfo.state.currentScene + "'");
-              if (clientKey !== key && clientInfo.state.currentScene !== data.sceneName) {
-                console.log("Switching client '" + clientKey + "'");
-                await sendCommand(clientKey, "SetCurrentScene", {'scene-name': data.sceneName});
-              }
-            });
-          });
-
-          OBS[key].on('ScenesChanged', async() => {
-            console.log("Scenes changed for '" + key + "'");
-            let scenes = await sendCommand(key, "GetSceneList");
-            updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
-          });
-
-          OBS[key].on('RecordingStarted', (data) => {
-            console.log("Recording started for '" + key + "'");
-            updateRecordingCallback(key, true);
-          });
-
-          OBS[key].on('RecordingStopped', (data) => {
-            console.log("Recording stopped for '" + key + "'");
-            updateRecordingCallback(key, false);
-          });
-
-          async function doConnect(key, item) {
-            await connectCallback(key, item);
+          if (JSON.stringify(item.config) !== JSON.stringify(prevClientsParsed[key].config)) {
+            changed = true;
           }
-
-          doConnect(key, item.config);
         });
-      });
+      }
+    }
+
+    if (changed) {
+      obsDisconnectCallback();
     }
   }, [
         clients,
@@ -218,45 +184,92 @@ function App() {
         updateStatusCallback,
         updateCurrentSceneCallback,
         updateScenesCallback,
-        updateRecordingCallback
+        updateRecordingCallback,
+        obsDisconnectCallback
     ]
   );
 
+  function doOBSConnect() {
+    console.log("Cookie: '" + cookieConfig + "'");
+
+    clients.forEach((item, key) => {
+      OBS.push(new OBSWebSocket());
+      OBS[key].on('error', err => {
+          console.error('socket error:', err);
+      });
+
+      OBS[key].on('ConnectionClosed', () => {
+        updateStatusCallback(key, 'Connection closed');
+        updateScenesCallback(key, [], '');
+      });
+
+      OBS[key].on('AuthenticationSuccess', async () => {
+        updateStatusCallback(key, 'Auth successful');
+        let scenes = await sendCommand(key, "GetSceneList");
+        updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
+      });
+
+      OBS[key].on('AuthenticationFailure', async () => {
+        updateStatusCallback(key, 'Auth failure');
+      });
+
+      OBS[key].on('SwitchScenes', (data) => {
+        updateCurrentSceneCallback(key, data.sceneName);
+        clients.forEach( async (clientInfo, clientKey) => {
+          if (clientKey !== key && clientInfo.state.currentScene !== data.sceneName) {
+            await sendCommand(clientKey, "SetCurrentScene", {'scene-name': data.sceneName});
+          }
+        });
+      });
+
+      OBS[key].on('ScenesChanged', async() => {
+        let scenes = await sendCommand(key, "GetSceneList");
+        updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
+      });
+
+      OBS[key].on('RecordingStarted', (data) => {
+        updateRecordingCallback(key, true);
+      });
+
+      OBS[key].on('RecordingStopped', (data) => {
+        updateRecordingCallback(key, false);
+      });
+
+      async function doConnect(key, item) {
+        await connectCallback(key, item);
+      }
+
+      doConnect(key, item.config);
+    });
+  }
+
   async function changeSceneClicked(key, scene) {
-    console.log("Scene changed for '" + key + "' to '" + scene + "'");
     await sendCommand(key, "SetCurrentScene", {'scene-name': scene});
   }
 
   async function recordingClicked(key, record) {
-    console.log("Record for '" + key + "' changed to '" + record + "'");
     await sendCommand(key, record ? "StartRecording" : "StopRecording");
   }
 
-  const clientList = clients.length ? clients.map((item, key) =>
-      <React.Fragment>
-          <OBSClient index={key}
-                key={key}
-                name={item.config.name}
-                address={item.config.address}
-                state={item.state.state}
-                scenes={item.state.scenes}
-                currentScene={item.state.currentScene}
-                recording={item.state.recording}
-                onSceneClicked={changeSceneClicked}
-                onRecordingClicked={recordingClicked}/>
-      </React.Fragment>
-    ) : (
-      <React.Fragment>
-        No clients
-      </React.Fragment>
-    )
+  async function connectClicked(key, record) {
+    doOBSConnect();
+  }
+
+  async function disconnectClicked(key, record) {
+    obsDisconnectCallback();
+  }
+
+  async function configChanged(newConfig) {
+    setClients(newConfig);
+    setCookieConfig(JSON.stringify(newConfig));
+  }
 
   return (
     <div className="App">
       <Router>
         <Navbar>
             <Navbar.Brand>OBS Scene Sync</Navbar.Brand>
-            <LinkContainer to="/clients">
+            <LinkContainer to="/">
               <Nav.Link>Clients</Nav.Link>
             </LinkContainer>
             <LinkContainer to="/config">
@@ -264,24 +277,29 @@ function App() {
             </LinkContainer>
         </Navbar>
         <Container fluid>
-          <Form>
-            <Row>
-              <Col>
-                {clientList}
-              </Col>
-            </Row>
-            <Row>
-              <Col>
-                <Switch>
-                  <Route exact path="/config" component={Config} />
-                  <Route path="/clients" render={(props) => (
-                      <Clients {...props} clients={clients}/>
-                      )}
-                    />
-                </Switch>
-              </Col>
-            </Row>
-          </Form>
+          <Row>
+            <Col>
+              <Switch>
+                <Route exact path="/config" render={(props) => (
+                    <Config {...props}
+                            config={clients}
+                            configChanged={configChanged}/>
+                    )} />
+
+                    )}
+                />
+                <Route path="/" render={(props) => (
+                    <Clients {...props}
+                            clients={clients}
+                            changeSceneClicked={changeSceneClicked}
+                            recordingClicked={recordingClicked}
+                            connectClicked={connectClicked}
+                            disconnectClicked={disconnectClicked}/>
+                    )}
+                  />
+              </Switch>
+            </Col>
+          </Row>
         </Container>
       </Router>
     </div>

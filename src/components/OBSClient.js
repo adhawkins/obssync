@@ -9,24 +9,21 @@ import RecordIndicator from './RecordIndicator.js';
 import SceneList from './SceneList.js';
 
 function OBSClient(props) {
-	console.log(props);
 	return (
 		<React.Fragment>
 			<Row>
 			<Col>
-				{props.name} - {props.state}
+				{props.name} - {props.state ? props.state.state : 'No state'}
 			</Col>
-			</Row>
-			<Row>
 			<Col>
 				<RecordIndicator index={props.index}
-													recording={props.recording}
+													recording={props.state ? props.state.recording: false}
 													onClicked={props.onRecordingClicked}/>
 			</Col>
-			<Col class='col-10'>
+			<Col className='col-10'>
 				<SceneList index={props.index}
-									sceneList={props.scenes}
-									currentScene={props.currentScene}
+									sceneList={props.state ? props.state.scenes : []}
+									currentScene={props.state ? props.state.currentScene : ""}
 									onClicked={props.onSceneClicked}/>
 			</Col>
 			</Row>

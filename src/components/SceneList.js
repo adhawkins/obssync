@@ -3,13 +3,14 @@ import React from 'react';
 import { Button } from 'react-bootstrap';
 
 function SceneList(props) {
-	const items = props.sceneList.length ? props.sceneList.map((item, key) =>
-			<Button className={props.currentScene===item ? "btn-success" : "btn-secondary"}
+	const items = (props.sceneList.length) ? props.sceneList.map((item, key) =>
+			<Button key = {key}
+							className={props.currentScene===item ? "btn-success" : "btn-secondary"}
 							onClick = {e => props.onClicked(props.index, item)}>
 								{item}&nbsp;
 			</Button>
 	) : (
-			<Button>empty</Button>
+			<div>No scenes detected</div>
 	);
 
 	return (

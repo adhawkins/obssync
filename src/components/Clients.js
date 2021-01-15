@@ -1,5 +1,11 @@
 import React from 'react';
 
+import {
+        Row,
+        Col,
+        Button
+      } from 'react-bootstrap';
+
 import OBSClient from './OBSClient.js';
 
 function Clients(props) {
@@ -8,21 +14,29 @@ function Clients(props) {
                 key={key}
                 name={item.config.name}
                 address={item.config.address}
-                state={item.state.state}
-                scenes={item.state.scenes}
-                currentScene={item.state.currentScene}
-                //onSceneClicked={changeSceneClicked}
-                //onRecordingClicked={recordingClicked}
-                recording={item.state.recording}/>
+                state={item.state}
+                onSceneClicked={props.changeSceneClicked}
+                onRecordingClicked={props.recordingClicked}
+                />
     ) : (
-      <React.Fragment>
-        No clients
-      </React.Fragment>
+      <Row>
+        <Col>
+          No clients
+        </Col>
+      </Row>
     )
 
 	return (
       <React.Fragment>
-		{clientList}
+        <Row>
+          <Col>
+            <Button onClick={props.connectClicked}>Connect</Button>
+          </Col>
+          <Col>
+            <Button onClick={props.disconnectClicked}>Disconnect</Button>
+          </Col>
+        </Row>
+    		{clientList}
       </React.Fragment>
 	);
 }
