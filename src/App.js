@@ -206,7 +206,7 @@ function App(props) {
       OBS[key].on('AuthenticationSuccess', async () => {
         updateStatusCallback(key, 'Auth successful');
         let scenes = await sendCommand(key, "GetSceneList");
-        updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
+        updateScenesCallback(key, scenes.scenes, scenes.currentScene);
       });
 
       OBS[key].on('AuthenticationFailure', async () => {
@@ -224,7 +224,7 @@ function App(props) {
 
       OBS[key].on('ScenesChanged', async() => {
         let scenes = await sendCommand(key, "GetSceneList");
-        updateScenesCallback(key, scenes.scenes, scenes['current-scene']);
+        updateScenesCallback(key, scenes.scenes, scenes.currentScene);
       });
 
       OBS[key].on('RecordingStarted', (data) => {
