@@ -29,7 +29,7 @@ import useCookie from "./hooks/useCookie.js";
 let OBS = [];
 
 function App(props) {
-  const [ cookieConfig, setCookieConfig ] = useCookie("config", JSON.stringify([]));
+  const [ cookieConfig, setCookieConfig ] = useCookie("obssync-config", JSON.stringify([]));
 
   function usePrevious(value) {
     const ref = useRef();
