@@ -102,10 +102,10 @@ function Config(props) {
 				{configList}
 				<Row>
 					<Col>
-						<Button onClick={addItem}>Add</Button>
+						<Button onClick={addItem}>Add Client</Button>
 					</Col>
 					<Col>
-						<Button onClick={e => props.configChanged(config)}>Save Config</Button>
+						<Button onClick={e => props.configChanged(config)}>Apply Config</Button>
 					</Col>
 				</Row>
 			</Form>

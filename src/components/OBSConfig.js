@@ -39,7 +39,7 @@ function OBSConfig(props) {
 				</Form.Group>
 			</Col>
 			<Col>
-				<Button onClick={e => props.onDeleted(props.config.key)}>Delete</Button>
+				<Button onClick={e => props.onDeleted(props.config.key)}>Delete Client</Button>
 			</Col>
 		</Row>
 	);
