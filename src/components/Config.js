@@ -11,6 +11,36 @@ import {
 
 function Config(props) {
 	const [config, setConfig] = useState(props.config);
+	const [configFile, setConfigFile] = useState(null);
+
+	function importFileChanged(e) {
+		setConfigFile(e.target.files[0]);
+	}
+
+	function importConfigClicked() {
+		if (configFile) {
+			configFile.text().then(t => setConfig(JSON.parse(t)))
+		} else {
+			alert("Select config file to import");
+		}
+	}
+
+	function downloadFile(filename, text) {
+		var element = document.createElement('a');
+		element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+		element.setAttribute('download', filename);
+
+		element.style.display = 'none';
+		document.body.appendChild(element);
+
+		element.click();
+
+		document.body.removeChild(element);
+	}
+
+	function exportConfigClicked() {
+		downloadFile("obssync-config.json", JSON.stringify(config, null, 2));
+	}
 
 	function configChanged(key, name, value) {
 		if (name && value) {
@@ -101,6 +131,15 @@ function Config(props) {
 			<Form>
 				{configList}
 				<Row>
+					<Col>
+						<Form.File onChange={e => importFileChanged(e)} />
+					</Col>
+					<Col>
+						<Button onClick={importConfigClicked}>Import Config</Button>
+					</Col>
+					<Col>
+						<Button onClick={exportConfigClicked}>Export Config</Button>
+					</Col>
 					<Col>
 						<Button onClick={addItem}>Add Client</Button>
 					</Col>
