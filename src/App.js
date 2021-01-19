@@ -13,8 +13,7 @@ import {
 import {
           BrowserRouter as Router,
           Switch,
-          Route,
-          useHistory
+          Route
         } from "react-router-dom";
 
 import {LinkContainer} from 'react-router-bootstrap'
