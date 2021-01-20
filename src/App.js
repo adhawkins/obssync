@@ -95,6 +95,12 @@ function App(props) {
     setClients(newClients);
   }, [clients]);
 
+  const updateSceneCollectionCallback = useCallback((key, sceneCollection) => {
+    const newClients = [...clients];
+    newClients[key].state.sceneCollection = sceneCollection;
+    setClients(newClients);
+  }, [clients]);
+
   const updateCurrentSceneCallback = useCallback((key, currentScene) => {
     const newClients = [...clients];
     newClients[key].state.currentScene = currentScene;
@@ -130,13 +136,14 @@ function App(props) {
 
       clients.forEach((item, key) => {
         updateScenesCallback(key, [], "");
+        updateSceneCollectionCallback(key, "");
         updateStatusCallback(key, "Disconnected");
         updateRecordingCallback(key, false);
       });
     }
 
     doOBSDisconnect();
-  }, [updateScenesCallback, updateStatusCallback, updateRecordingCallback, clients]);
+  }, [updateScenesCallback, updateStatusCallback, updateRecordingCallback, updateSceneCollectionCallback, clients]);
 
   async function sendCommand(key, command, params) {
    try {
@@ -184,6 +191,7 @@ function App(props) {
         updateCurrentSceneCallback,
         updateScenesCallback,
         updateRecordingCallback,
+        updateSceneCollectionCallback,
         obsDisconnectCallback
     ]
   );
@@ -206,6 +214,8 @@ function App(props) {
         updateStatusCallback(key, 'Auth successful');
         let scenes = await sendCommand(key, "GetSceneList");
         updateScenesCallback(key, scenes.scenes, scenes.currentScene);
+        let sceneCollection = await sendCommand(key, "GetCurrentSceneCollection");
+        updateSceneCollectionCallback(key, sceneCollection.scName);
       });
 
       OBS[key].on('AuthenticationFailure', async () => {
@@ -224,6 +234,11 @@ function App(props) {
       OBS[key].on('ScenesChanged', async() => {
         let scenes = await sendCommand(key, "GetSceneList");
         updateScenesCallback(key, scenes.scenes, scenes.currentScene);
+      });
+
+      OBS[key].on('SceneCollectionChanged', async() => {
+        let sceneCollection = await sendCommand(key, "GetCurrentSceneCollection");
+        updateSceneCollectionCallback(key, sceneCollection.scName);
       });
 
       OBS[key].on('RecordingStarted', (data) => {
