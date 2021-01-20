@@ -208,6 +208,7 @@ function App(props) {
       OBS[key].on('ConnectionClosed', () => {
         updateStatusCallback(key, 'Connection closed');
         updateScenesCallback(key, [], '');
+        updateSceneCollectionCallback(key, '');
       });
 
       OBS[key].on('AuthenticationSuccess', async () => {
