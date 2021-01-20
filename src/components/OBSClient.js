@@ -16,6 +16,9 @@ function OBSClient(props) {
 				{props.name} - {props.state ? props.state.state : 'No state'}
 			</Col>
 			<Col>
+				{props.state ? props.state.sceneCollection : ""}
+			</Col>
+			<Col>
 				<RecordIndicator index={props.index}
 													recording={props.state ? props.state.recording: false}
 													onClicked={props.onRecordingClicked}/>
